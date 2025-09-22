@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Downloader - yt-dlp Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'spin-slow': 'spin 2s linear infinite',
+                        'pulse-slow': 'pulse 3s ease-in-out infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen">
+    <!-- @COMPONENT: AppContainer -->
+    <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-slate-200">
+            <div class="max-w-4xl mx-auto px-6 py-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-download text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-semibold text-slate-800">Video Downloader</h1>
+                        <p class="text-sm text-slate-600">Interface para yt-dlp</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-4xl mx-auto px-6 py-8">
+            <!-- Tab Navigation -->
+            <!-- @COMPONENT: TabNavigation -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 mb-6">
+                <div class="border-b border-slate-200">
+                    <nav class="flex">
+                        <button id="downloadTab" class="tab-button active px-6 py-4 text-sm font-medium border-b-2 border-blue-600 text-blue-600 bg-blue-50">
+                            <i class="fas fa-download mr-2"></i>
+                            Download de Vídeo
+                        </button>
+                        <button id="installTab" class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-colors">
+                            <i class="fas fa-cog mr-2"></i>
+                            Instalação do yt-dlp
+                        </button>
+                    </nav>
+                </div>
+                <!-- @END_COMPONENT: TabNavigation -->
+
+                <!-- Download Tab Content -->
+                <!-- @COMPONENT: DownloadInterface -->
+                <div id="downloadContent" class="tab-content p-8">
+                    <div class="space-y-6">
+                        <!-- URL Input Section -->
+                        <div class="space-y-2">
+                            <label for="videoUrl" class="block text-sm font-medium text-slate-700">
+                                URL do Vídeo
+                            </label>
+                            <div class="relative">
+                                <input 
+                                    type="url" 
+                                    id="videoUrl" 
+                                    placeholder="Cole aqui a URL do vídeo (YouTube, Instagram, TikTok, etc.)"
+                                    class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-slate-700 placeholder-slate-400"
+                                    data-bind="videoUrl"
+                                    data-mock="true"
+                                />
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                                    <i class="fas fa-link text-slate-400"></i>
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-500">
+                                Suporte para YouTube, Instagram, TikTok, Twitter e muitas outras plataformas
+                            </p>
+                        </div>
+
+                        <!-- Download Button -->
+                        <div class="flex space-x-3">
+                            <button 
+                                id="downloadBtn"
+                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors focus:ring-4 focus:ring-blue-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                data-event="click:handleDownload"
+                                data-implementation="Should validate URL and trigger yt-dlp command"
+                            >
+                                <span id="downloadBtnText">
+                                    <i class="fas fa-download mr-2"></i>
+                                    BAIXAR
+                                </span>
+                                <span id="downloadBtnLoading" class="hidden">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>
+                                    BAIXANDO...
+                                </span>
+                            </button>
+                            <button 
+                                class="px-4 py-3 border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors focus:ring-4 focus:ring-slate-200 focus:outline-none"
+                                data-event="click:clearInput"
+                                title="Limpar URL"
+                            >
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <!-- Progress Section -->
+                        <!-- @STATE: downloadProgress:number = 0, isDownloading:boolean = false -->
+                        <div id="progressSection" class="hidden space-y-3">
+                            <div class="bg-slate-100 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-slate-700">Progresso do Download</span>
+                                    <span id="progressPercent" class="text-sm text-slate-600" data-bind="downloadProgress">0%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 rounded-full h-2">
+                                    <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                                <p id="progressStatus" class="text-xs text-slate-500 mt-2" data-bind="downloadStatus">Iniciando download...</p>
+                            </div>
+                        </div>
+
+                        <!-- Status Messages -->
+                        <div id="statusMessages" class="space-y-2">
+                            <!-- Success Message -->
+                            <div id="successMessage" class="hidden bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                                <div class="flex items-center">
+                                    <i class="fas fa-check-circle text-emerald-500 mr-3"></i>
+                                    <div>
+                                        <p class="text-sm font-medium text-emerald-800">Download concluído com sucesso!</p>
+                                        <p class="text-xs text-emerald-600 mt-1">O arquivo foi salvo na pasta de downloads.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Error Message -->
+                            <div id="errorMessage" class="hidden bg-red-50 border border-red-200 rounded-lg p-4">
+                                <div class="flex items-center">
+                                    <i class="fas fa-exclamation-circle text-red-500 mr-3"></i>
+                                    <div>
+                                        <p class="text-sm font-medium text-red-800">Erro no download</p>
+                                        <p id="errorText" class="text-xs text-red-600 mt-1" data-bind="errorMessage">URL inválida ou yt-dlp não encontrado.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Warning Message -->
+                            <div id="warningMessage" class="hidden bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                <div class="flex items-center">
+                                    <i class="fas fa-exclamation-triangle text-amber-500 mr-3"></i>
+                                    <div>
+                                        <p class="text-sm font-medium text-amber-800">yt-dlp não encontrado</p>
+                                        <p class="text-xs text-amber-600 mt-1">Acesse a aba "Instalação do yt-dlp" para instalar a ferramenta.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Command Preview -->
+                        <div class="bg-slate-800 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-medium text-slate-300">Comando yt-dlp utilizado:</span>
+                                <button class="text-xs text-slate-400 hover:text-slate-300 transition-colors" data-event="click:copyCommand">
+                                    <i class="fas fa-copy mr-1"></i>
+                                    Copiar
+                                </button>
+                            </div>
+                            <code class="text-xs text-green-400 font-mono block bg-slate-900 p-3 rounded border">
+                                yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 <span class="text-blue-400" data-bind="videoUrl">%URL_DO_VIDEO%</span>
+                            </code>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: DownloadInterface -->
+
+                <!-- Installation Tab Content -->
+                <!-- @COMPONENT: InstallationGuide -->
+                <div id="installContent" class="tab-content hidden p-8">
+                    <div class="space-y-6">
+                        <!-- Installation Header -->
+                        <div class="text-center pb-6 border-b border-slate-200">
+                            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-terminal text-blue-600 text-2xl"></i>
+                            </div>
+                            <h2 class="text-2xl font-semibold text-slate-800 mb-2">Instalação do yt-dlp</h2>
+                            <p class="text-slate-600">Siga os passos abaixo para instalar o yt-dlp e suas dependências</p>
+                        </div>
+
+                        <!-- Prerequisites -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div class="flex items-start">
+                                <i class="fas fa-info-circle text-blue-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h3 class="font-medium text-blue-800 mb-1">Pré-requisitos</h3>
+                                    <p class="text-sm text-blue-700">Execute o PowerShell como <strong>Administrador</strong> para instalar as ferramentas necessárias.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Installation Steps -->
+                        <div class="space-y-4">
+                            <!-- Step 1 -->
+                            <div class="bg-white border border-slate-200 rounded-lg p-6">
+                                <div class="flex items-start space-x-4">
+                                    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <span class="text-white font-semibold text-sm">1</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="font-medium text-slate-800 mb-2">Definir Política de Execução</h3>
+                                        <p class="text-sm text-slate-600 mb-3">Primeiro, permita a execução de scripts no PowerShell:</p>
+                                        <div class="bg-slate-900 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-xs text-slate-400">PowerShell (Administrador)</span>
+                                                <button class="text-xs text-slate-400 hover:text-slate-300 transition-colors" data-event="click:copyCommand1">
+                                                    <i class="fas fa-copy mr-1"></i>
+                                                    Copiar
+                                                </button>
+                                            </div>
+                                            <code class="text-green-400 font-mono text-sm block">Set-ExecutionPolicy Bypass -Scope Process</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 2 -->
+                            <div class="bg-white border border-slate-200 rounded-lg p-6">
+                                <div class="flex items-start space-x-4">
+                                    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <span class="text-white font-semibold text-sm">2</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="font-medium text-slate-800 mb-2">Instalar Chocolatey</h3>
+                                        <p class="text-sm text-slate-600 mb-3">Instale o gerenciador de pacotes Chocolatey:</p>
+                                        <div class="bg-slate-900 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-xs text-slate-400">PowerShell (Administrador)</span>
+                                                <button class="text-xs text-slate-400 hover:text-slate-300 transition-colors" data-event="click:copyCommand2">
+                                                    <i class="fas fa-copy mr-1"></i>
+                                                    Copiar
+                                                </button>
+                                            </div>
+                                            <code class="text-green-400 font-mono text-sm block leading-relaxed">
+                                                Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+                                            </code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 3 -->
+                            <div class="bg-white border border-slate-200 rounded-lg p-6">
+                                <div class="flex items-start space-x-4">
+                                    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <span class="text-white font-semibold text-sm">3</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="font-medium text-slate-800 mb-2">Instalar yt-dlp e FFmpeg</h3>
+                                        <p class="text-sm text-slate-600 mb-3">Instale o yt-dlp e suas dependências:</p>
+                                        <div class="bg-slate-900 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-xs text-slate-400">PowerShell (Administrador)</span>
+                                                <button class="text-xs text-slate-400 hover:text-slate-300 transition-colors" data-event="click:copyCommand3">
+                                                    <i class="fas fa-copy mr-1"></i>
+                                                    Copiar
+                                                </button>
+                                            </div>
+                                            <code class="text-green-400 font-mono text-sm block">choco install ffmpeg yt-dlp</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Verification -->
+                        <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-emerald-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h3 class="font-medium text-emerald-800 mb-1">Verificação da Instalação</h3>
+                                    <p class="text-sm text-emerald-700 mb-2">Após a instalação, você pode verificar se tudo está funcionando com:</p>
+                                    <code class="text-sm bg-emerald-100 px-2 py-1 rounded font-mono text-emerald-800">yt-dlp --version</code>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Back to Download -->
+                        <div class="text-center pt-4">
+                            <button 
+                                id="backToDownloadBtn"
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors focus:ring-4 focus:ring-blue-200 focus:outline-none"
+                                data-event="click:switchToDownloadTab"
+                            >
+                                <i class="fas fa-arrow-left mr-2"></i>
+                                Voltar para Download
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: InstallationGuide -->
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t border-slate-200 mt-12">
+            <div class="max-w-4xl mx-auto px-6 py-6">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-slate-600">
+                        <p>Interface para yt-dlp • Baixe vídeos de múltiplas plataformas</p>
+                    </div>
+                    <div class="flex items-center space-x-4 text-sm text-slate-500">
+                        <a href="#" class="hover:text-slate-700 transition-colors">
+                            <i class="fab fa-github mr-1"></i>
+                            GitHub
+                        </a>
+                        <a href="#" class="hover:text-slate-700 transition-colors">
+                            <i class="fas fa-question-circle mr-1"></i>
+                            Ajuda
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+    <!-- @END_COMPONENT: AppContainer -->
+
+    <script>
+        // TODO: Implement business logic, API calls, and file download handling
+        (function() {
+            // Tab switching functionality
+            const downloadTab = document.getElementById('downloadTab');
+            const installTab = document.getElementById('installTab');
+            const downloadContent = document.getElementById('downloadContent');
+            const installContent = document.getElementById('installContent');
+
+            function switchTab(activeTab, inactiveTab, activeContent, inactiveContent) {
+                // Update tab styles
+                activeTab.classList.add('active', 'border-blue-600', 'text-blue-600', 'bg-blue-50');
+                activeTab.classList.remove('border-transparent', 'text-slate-600');
+                
+                inactiveTab.classList.remove('active', 'border-blue-600', 'text-blue-600', 'bg-blue-50');
+                inactiveTab.classList.add('border-transparent', 'text-slate-600');
+
+                // Show/hide content
+                activeContent.classList.remove('hidden');
+                inactiveContent.classList.add('hidden');
+            }
+
+            downloadTab.addEventListener('click', () => {
+                switchTab(downloadTab, installTab, downloadContent, installContent);
+            });
+
+            installTab.addEventListener('click', () => {
+                switchTab(installTab, downloadTab, installContent, downloadContent);
+            });
+
+            document.getElementById('backToDownloadBtn')?.addEventListener('click', () => {
+                switchTab(downloadTab, installTab, downloadContent, installContent);
+            });
+
+            // Copy to clipboard functionality
+            function copyToClipboard(text) {
+                navigator.clipboard.writeText(text).then(() => {
+                    // Visual feedback could be added here
+                    console.log('Copied to clipboard:', text);
+                });
+            }
+
+            // Copy command buttons
+            const commands = {
+                copyCommand1: 'Set-ExecutionPolicy Bypass -Scope Process',
+                copyCommand2: 'Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString(\'https://community.chocolatey.org/install.ps1\'))',
+                copyCommand3: 'choco install ffmpeg yt-dlp'
+            };
+
+            Object.keys(commands).forEach(buttonId => {
+                const button = document.querySelector(`[data-event*="${buttonId}"]`);
+                if (button) {
+                    button.addEventListener('click', () => copyToClipboard(commands[buttonId]));
+                }
+            });
+
+            // Download button mock functionality
+            const downloadBtn = document.getElementById('downloadBtn');
+            const downloadBtnText = document.getElementById('downloadBtnText');
+            const downloadBtnLoading = document.getElementById('downloadBtnLoading');
+            const progressSection = document.getElementById('progressSection');
+            const videoUrlInput = document.getElementById('videoUrl');
+
+            downloadBtn?.addEventListener('click', function() {
+                const url = videoUrlInput.value.trim();
+                
+                if (!url) {
+                    // Show error for empty URL
+                    showMessage('errorMessage', 'Por favor, insira uma URL válida.');
+                    return;
+                }
+
+                // Mock download process
+                startDownload();
+            });
+
+            function startDownload() {
+                // Show loading state
+                downloadBtnText.classList.add('hidden');
+                downloadBtnLoading.classList.remove('hidden');
+                downloadBtn.disabled = true;
+                progressSection.classList.remove('hidden');
+
+                // Hide previous messages
+                hideAllMessages();
+
+                // TODO: Replace with actual yt-dlp integration
+                simulateDownload();
+            }
+
+            function simulateDownload() {
+                let progress = 0;
+                const progressBar = document.getElementById('progressBar');
+                const progressPercent = document.getElementById('progressPercent');
+                const progressStatus = document.getElementById('progressStatus');
+
+                const interval = setInterval(() => {
+                    progress += Math.random() * 20;
+                    if (progress > 100) progress = 100;
+
+                    progressBar.style.width = progress + '%';
+                    progressPercent.textContent = Math.round(progress) + '%';
+                    
+                    if (progress < 30) {
+                        progressStatus.textContent = 'Obtendo informações do vídeo...';
+                    } else if (progress < 70) {
+                        progressStatus.textContent = 'Baixando vídeo...';
+                    } else if (progress < 95) {
+                        progressStatus.textContent = 'Processando arquivo...';
+                    } else {
+                        progressStatus.textContent = 'Finalizando...';
+                    }
+
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        finishDownload();
+                    }
+                }, 200);
+            }
+
+            function finishDownload() {
+                // Reset button state
+                downloadBtnText.classList.remove('hidden');
+                downloadBtnLoading.classList.add('hidden');
+                downloadBtn.disabled = false;
+                
+                // Hide progress
+                progressSection.classList.add('hidden');
+                
+                // Show success message
+                showMessage('successMessage');
+            }
+
+            function showMessage(messageId, customText = null) {
+                hideAllMessages();
+                const message = document.getElementById(messageId);
+                if (message) {
+                    message.classList.remove('hidden');
+                    if (customText && messageId === 'errorMessage') {
+                        document.getElementById('errorText').textContent = customText;
+                    }
+                }
+            }
+
+            function hideAllMessages() {
+                ['successMessage', 'errorMessage', 'warningMessage'].forEach(id => {
+                    const message = document.getElementById(id);
+                    if (message) message.classList.add('hidden');
+                });
+            }
+
+            // Clear input functionality
+            document.querySelector('[data-event*="clearInput"]')?.addEventListener('click', () => {
+                videoUrlInput.value = '';
+                hideAllMessages();
+            });
+
+        })();
+    </script>
+</body>
+</html>
